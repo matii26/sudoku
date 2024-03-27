@@ -1,181 +1,134 @@
-# sudoku
-
-<Window x:Class="SudokuWPF.MainWindow"
+<Window x:Class="SudokuGame.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Sudoku" Height="450" Width="450">
-    <Grid Name="SudokuGrid">
-        <!-- Definicje wierszy i kolumn -->
+    <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="Auto"/>
-        </Grid.ColumnDefinitions>
-
-        <!-- Przycisk sprawdzający -->
-        <Button Content="Sprawdź" Grid.Row="0" Grid.Column="1" Click="CheckButton_Click"/>
-
-        <!-- Plansza Sudoku -->
-        <Grid Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            <!-- Komórki Sudoku -->
-            <!-- Tutaj dodasz TextBoxy w pętli DrawBoard() -->
+        
+        <Grid x:Name="sudokuGrid" Margin="10">
+            <Grid.Resources>
+                <Style TargetType="TextBox">
+                    <Setter Property="Width" Value="60" />
+                    <Setter Property="Height" Value="60" />
+                    <Setter Property="FontSize" Value="20" />
+                    <Setter Property="TextAlignment" Value="Center" />
+                    <Setter Property="Margin" Value="1" />
+                    <Setter Property="Background" Value="White" />
+                    <Setter Property="IsReadOnly" Value="True" />
+                </Style>
+            </Grid.Resources>
         </Grid>
+
+        <Button Grid.Row="1" Content="Solve" Click="Solve_Click" HorizontalAlignment="Center" />
     </Grid>
 </Window>
 
 
+
 using System;
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
 
-namespace SudokuWPF
+namespace SudokuGame
 {
     public partial class MainWindow : Window
     {
-        private int[,] board = new int[9, 9];
+        private readonly int[,] sudokuGrid;
+        private readonly TextBox[,] textBoxes;
 
         public MainWindow()
         {
             InitializeComponent();
-            InitializeBoard();
-            DrawBoard();
+            sudokuGrid = new int[4, 4];
+            textBoxes = new TextBox[4, 4];
+
+            InitializeSudokuGrid();
+            GenerateSudoku();
         }
 
-        private void InitializeBoard()
+        private void InitializeSudokuGrid()
         {
-            // Inicjalizacja planszy z wartościami początkowymi
-            // Możesz użyć algorytmu do generowania planszy lub załadować z pliku, bazy danych itp.
-        }
-
-        private void DrawBoard()
-        {
-            // Rysowanie planszy Sudoku
-            for (int i = 0; i < 9; i++)
+            for (int row = 0; row < 4; row++)
             {
-                for (int j = 0; j < 9; j++)
+                for (int col = 0; col < 4; col++)
                 {
                     TextBox textBox = new TextBox
                     {
-                        Width = 40,
-                        Height = 40,
-                        TextAlignment = TextAlignment.Center,
-                        FontSize = 20,
-                        Margin = new Thickness(5),
-                        Text = board[i, j] == 0 ? string.Empty : board[i, j].ToString()
+                        Name = $"textBox_{row}_{col}",
                     };
+
+                    sudokuGrid[row, col] = 0;
                     textBox.TextChanged += TextBox_TextChanged;
-                    Grid.SetRow(textBox, i);
-                    Grid.SetColumn(textBox, j);
-                    SudokuGrid.Children.Add(textBox);
+
+                    sudokuGrid.Children.Add(textBox);
+                    Grid.SetRow(textBox, row);
+                    Grid.SetColumn(textBox, col);
+
+                    textBoxes[row, col] = textBox;
                 }
             }
+        }
+
+        private void GenerateSudoku()
+        {
+            // Implement Sudoku generation algorithm here
+        }
+
+        private bool IsValidPlacement(int row, int col, int value)
+        {
+            // Check if the value is valid for the given row and column
+            for (int i = 0; i < 4; i++)
+            {
+                if (sudokuGrid[row, i] == value || sudokuGrid[i, col] == value)
+                    return false;
+            }
+
+            // Check if the value is valid for the 2x2 subgrid
+            int subgridStartRow = row - row % 2;
+            int subgridStartCol = col - col % 2;
+            for (int i = subgridStartRow; i < subgridStartRow + 2; i++)
+            {
+                for (int j = subgridStartCol; j < subgridStartCol + 2; j++)
+                {
+                    if (sudokuGrid[i, j] == value)
+                        return false;
+                }
+            }
+
+            return true;
         }
 
         private void TextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
-            // Aktualizacja planszy po zmianie wartości w TextBoxie
             TextBox textBox = sender as TextBox;
-            if (textBox != null && int.TryParse(textBox.Text, out int value))
+            int row = Grid.GetRow(textBox);
+            int col = Grid.GetColumn(textBox);
+
+            if (!int.TryParse(textBox.Text, out int value) || value < 1 || value > 4)
             {
-                int row = Grid.GetRow(textBox);
-                int col = Grid.GetColumn(textBox);
-                board[row, col] = value;
+                textBox.Text = "";
+                sudokuGrid[row, col] = 0;
+                return;
             }
+
+            if (!IsValidPlacement(row, col, value))
+            {
+                textBox.Text = "";
+                sudokuGrid[row, col] = 0;
+                MessageBox.Show("Invalid placement!");
+                return;
+            }
+
+            sudokuGrid[row, col] = value;
         }
 
-        private bool IsValidBoard()
+        private void Solve_Click(object sender, RoutedEventArgs e)
         {
-            // Sprawdzanie poprawności planszy
-            for (int col = 0; col < 9; col++)
-            {
-                if (!IsValidColumn(col) || !IsValidRow(col) || !IsValidSquare(col)) return false;
-            }
-            return true;
-        }
-
-        private bool IsValidColumn(int col)
-        {
-            // Sprawdzanie poprawności kolumny
-            bool[] presence = new bool[9];
-            for (int row = 0; row < 9; row++)
-            {
-                if (board[row, col] != 0)
-                {
-                    if (presence[board[row, col] - 1]) return false;
-                    presence[board[row, col] - 1] = true;
-                }
-            }
-            return true;
-        }
-
-        private bool IsValidRow(int row)
-        {
-            // Sprawdzanie poprawności wiersza
-            bool[] presence = new bool[9];
-            for (int col = 0; col < 9; col++)
-            {
-                if (board[row, col] != 0)
-                {
-                    if (presence[board[row, col] - 1]) return false;
-                    presence[board[row, col] - 1] = true;
-                }
-            }
-            return true;
-        }
-
-        private bool IsValidSquare(int square)
-        {
-            // Sprawdzanie poprawności kwadratu 3x3
-            bool[] presence = new bool[9];
-            int startRow = (square / 3) * 3;
-            int startCol = (square % 3) * 3;
-            for (int row = startRow; row < startRow + 3; row++)
-            {
-                for (int col = startCol; col < startCol + 3; col++)
-                {
-                    if (board[row, col] != 0)
-                    {
-                        if (presence[board[row, col] - 1]) return false;
-                        presence[board[row, col] - 1] = true;
-                    }
-                }
-            }
-            return true;
-        }
-
-        private void CheckButton_Click(object sender, RoutedEventArgs e)
-        {
-            // Obsługa kliknięcia przycisku "Sprawdź"
-            if (IsValidBoard())
-                MessageBox.Show("Gratulacje! Rozwiązanie jest poprawne!");
-            else
-                MessageBox.Show("Niestety, rozwiązanie zawiera błędy.");
+            // Implement Sudoku solving algorithm here
         }
     }
 }
